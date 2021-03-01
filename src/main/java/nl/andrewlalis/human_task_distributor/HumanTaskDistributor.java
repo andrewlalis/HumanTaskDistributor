@@ -7,10 +7,7 @@ import org.apache.commons.csv.CSVPrinter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class HumanTaskDistributor {
@@ -24,7 +21,9 @@ public class HumanTaskDistributor {
 			FileParser fileParser = new FileParser();
 			Map<Human, Float> nameWeightMap = fileParser.parseHumanList(cmd.getOptionValue("hl"));
 			Set<Task> tasks = fileParser.parseTaskList(cmd.getOptionValue("tl"));
-			List<Map<Human, Set<Task>>> previousDistributions = fileParser.parsePreviousTaskDistributions(cmd.getOptionValues("prev"));
+			String[] previousDistributionPaths = cmd.getOptionValues("prev");
+			if (previousDistributionPaths == null) previousDistributionPaths = new String[0];
+			List<Map<Human, Set<Task>>> previousDistributions = fileParser.parsePreviousTaskDistributions(previousDistributionPaths);
 
 			long start = System.currentTimeMillis();
 			Map<Human, Set<Task>> taskDistributions = new Distributor().generateDistribution(nameWeightMap, tasks, previousDistributions);
@@ -53,6 +52,7 @@ public class HumanTaskDistributor {
 
 		} catch (Exception e) {
 			System.err.println("Error: " + e.getMessage());
+			e.printStackTrace();
 			HelpFormatter hf = new HelpFormatter();
 			hf.printHelp("HumanTaskDistributor", options);
 			System.exit(1);
