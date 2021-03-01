@@ -22,6 +22,7 @@ public class Distributor {
 		final float totalWeight = weightedHumans.values().stream().reduce(Float::sum).orElse(0.0f);
 		final float averageTasksPerHuman = unweightedAverageTasksPerHuman / (totalWeight / taskDistributions.size());
 
+		// Precompute the theoretical maximum number of tasks that each person should be assigned.
 		Map<Human, Float> maxTasksPerHuman = new HashMap<>();
 		weightedHumans.forEach((h, w) -> maxTasksPerHuman.put(h, w * averageTasksPerHuman));
 
@@ -30,6 +31,7 @@ public class Distributor {
 		taskStack.addAll(tasks);
 		Collections.shuffle(taskStack);
 
+		// Iteratively pop and assign each task to a person.
 		while (!taskStack.empty()) {
 			Task t = taskStack.pop();
 			Human h = this.chooseHumanForNextTask(

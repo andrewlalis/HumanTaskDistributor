@@ -25,11 +25,18 @@ public class HumanTaskDistributor {
 			Map<Human, Float> nameWeightMap = fileParser.parseHumanList(cmd.getOptionValue("hl"));
 			Set<Task> tasks = fileParser.parseTaskList(cmd.getOptionValue("tl"));
 			List<Map<Human, Set<Task>>> previousDistributions = fileParser.parsePreviousTaskDistributions(cmd.getOptionValues("prev"));
+
+			long start = System.currentTimeMillis();
 			Map<Human, Set<Task>> taskDistributions = new Distributor().generateDistribution(nameWeightMap, tasks, previousDistributions);
-			taskDistributions.forEach((key, value) -> {
-				System.out.println("Task distribution for " + key + ", " + value.size() + " tasks:");
-				value.forEach(t -> System.out.println("\t" + t.getName()));
-			});
+			long durationMillis = System.currentTimeMillis() - start;
+			System.out.printf(
+					"Completed distribution of %d tasks to %d people in %d ms.%n",
+					tasks.size(),
+					taskDistributions.keySet().size(),
+					durationMillis
+			);
+
+			// Write to a file.
 			String filePath = cmd.hasOption("o") ? cmd.getOptionValue("o") : "distribution.csv";
 			CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(Paths.get(filePath), StandardCharsets.UTF_8), CSV_FORMAT);
 			for (Map.Entry<Human, Set<Task>> entry : taskDistributions.entrySet()) {
@@ -41,6 +48,9 @@ public class HumanTaskDistributor {
 				}
 			}
 			printer.close(true);
+
+			System.out.println("Wrote task distribution data to " + filePath);
+
 		} catch (Exception e) {
 			System.err.println("Error: " + e.getMessage());
 			HelpFormatter hf = new HelpFormatter();
