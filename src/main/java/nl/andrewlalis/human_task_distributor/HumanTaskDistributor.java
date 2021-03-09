@@ -1,12 +1,9 @@
 package nl.andrewlalis.human_task_distributor;
 
+import nl.andrewlalis.human_task_distributor.commands.DistributeTasks;
 import nl.andrewlalis.human_task_distributor.commands.PrepareTasksList;
 import org.apache.commons.cli.*;
 import org.apache.commons.csv.CSVFormat;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public class HumanTaskDistributor {
 	public static final CSVFormat CSV_FORMAT = CSVFormat.RFC4180;
@@ -15,44 +12,15 @@ public class HumanTaskDistributor {
 		final Options options = getOptions();
 		CommandLineParser cmdParser = new DefaultParser();
 		try {
-
-			FileParser fileParser = new FileParser();
-			FileWriter fileWriter = new FileWriter();
 			CommandLine cmd = cmdParser.parse(options, args);
 			if (cmd.hasOption("ptl")) {
-				String[] values = cmd.getOptionValues("ptl");
-				new PrepareTasksList().execute(values);
-				return;
+				new PrepareTasksList().execute(cmd);
+			} else if (cmd.hasOption("hl") && cmd.hasOption("tl")) {
+				new DistributeTasks().execute(cmd);
 			}
-
-			if (!cmd.hasOption("hl") || !cmd.hasOption("tl")) {
-				throw new IllegalArgumentException("When not preparing a tasks-list, hl and tl are required.");
-			}
-
-			Map<Human, Float> nameWeightMap = fileParser.parseHumanList(cmd.getOptionValue("hl"));
-			Set<Task> tasks = fileParser.parseTaskList(cmd.getOptionValue("tl"));
-			String[] previousDistributionPaths = cmd.getOptionValues("prev");
-			if (previousDistributionPaths == null) previousDistributionPaths = new String[0];
-			List<Map<Human, Set<Task>>> previousDistributions = fileParser.parsePreviousTaskDistributions(previousDistributionPaths);
-
-			long start = System.currentTimeMillis();
-			Map<Human, Set<Task>> taskDistributions = new Distributor().generateDistribution(nameWeightMap, tasks, previousDistributions);
-			long durationMillis = System.currentTimeMillis() - start;
-			System.out.printf(
-					"Completed distribution of %d tasks to %d people in %d ms.%n",
-					tasks.size(),
-					taskDistributions.keySet().size(),
-					durationMillis
-			);
-
-			// Write to a file.
-			final String filePath = cmd.hasOption("o") ? cmd.getOptionValue("o") : "distribution.csv";
-			fileWriter.write(taskDistributions, filePath);
-			System.out.println("Wrote task distribution data to " + filePath);
-
+			throw new IllegalArgumentException("Invalid command.");
 		} catch (Exception e) {
 			System.err.println("Error: " + e.getMessage());
-			e.printStackTrace();
 			HelpFormatter hf = new HelpFormatter();
 			hf.printHelp("HumanTaskDistributor", options);
 			System.exit(1);
