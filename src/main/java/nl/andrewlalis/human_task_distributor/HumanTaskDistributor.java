@@ -1,5 +1,6 @@
 package nl.andrewlalis.human_task_distributor;
 
+import nl.andrewlalis.human_task_distributor.commands.PrepareTasksList;
 import org.apache.commons.cli.*;
 import org.apache.commons.csv.CSVFormat;
 
@@ -14,21 +15,13 @@ public class HumanTaskDistributor {
 		final Options options = getOptions();
 		CommandLineParser cmdParser = new DefaultParser();
 		try {
+
 			FileParser fileParser = new FileParser();
 			FileWriter fileWriter = new FileWriter();
 			CommandLine cmd = cmdParser.parse(options, args);
 			if (cmd.hasOption("ptl")) {
 				String[] values = cmd.getOptionValues("ptl");
-				if (values.length != 2) {
-					throw new IllegalArgumentException("Expected exactly 2 parameters for ptl arg.");
-				}
-				String filePath = values[0].trim();
-				String regex = values[1].trim();
-				Set<Task> tasks = fileParser.parseTaskList(filePath, regex);
-				System.out.println("Read " + tasks.size() + " tasks from file.");
-				String outFilePath = filePath.replaceFirst("\\..*", ".csv");
-				fileWriter.write(tasks, outFilePath);
-				System.out.println("Wrote tasks to " + outFilePath);
+				new PrepareTasksList().execute(values);
 				return;
 			}
 
