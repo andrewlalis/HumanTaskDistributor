@@ -5,8 +5,11 @@ import org.apache.commons.csv.CSVRecord;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static nl.andrewlalis.human_task_distributor.HumanTaskDistributor.CSV_FORMAT;
 
@@ -73,5 +76,21 @@ public class FileParser {
 			previousDistributions.add(distribution);
 		}
 		return previousDistributions;
+	}
+
+	public Set<Task> parseTaskList(String path, String regex) {
+		try {
+			String contents = String.join(" ", Files.readAllLines(Paths.get(path), StandardCharsets.UTF_8));
+			Pattern pattern = Pattern.compile(regex);
+			Matcher matcher = pattern.matcher(contents);
+			Set<Task> tasks = new HashSet<>();
+			while (matcher.find()) {
+				tasks.add(new Task(matcher.group()));
+			}
+			return tasks;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return new HashSet<>();
+		}
 	}
 }

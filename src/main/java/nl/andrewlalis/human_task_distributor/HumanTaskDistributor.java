@@ -2,13 +2,10 @@ package nl.andrewlalis.human_task_distributor;
 
 import org.apache.commons.cli.*;
 import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
 
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class HumanTaskDistributor {
 	public static final CSVFormat CSV_FORMAT = CSVFormat.RFC4180;
@@ -17,8 +14,28 @@ public class HumanTaskDistributor {
 		final Options options = getOptions();
 		CommandLineParser cmdParser = new DefaultParser();
 		try {
-			CommandLine cmd = cmdParser.parse(options, args);
 			FileParser fileParser = new FileParser();
+			FileWriter fileWriter = new FileWriter();
+			CommandLine cmd = cmdParser.parse(options, args);
+			if (cmd.hasOption("ptl")) {
+				String[] values = cmd.getOptionValues("ptl");
+				if (values.length != 2) {
+					throw new IllegalArgumentException("Expected exactly 2 parameters for ptl arg.");
+				}
+				String filePath = values[0].trim();
+				String regex = values[1].trim();
+				Set<Task> tasks = fileParser.parseTaskList(filePath, regex);
+				System.out.println("Read " + tasks.size() + " tasks from file.");
+				String outFilePath = filePath.replaceFirst("\\..*", ".csv");
+				fileWriter.write(tasks, outFilePath);
+				System.out.println("Wrote tasks to " + outFilePath);
+				return;
+			}
+
+			if (!cmd.hasOption("hl") || !cmd.hasOption("tl")) {
+				throw new IllegalArgumentException("When not preparing a tasks-list, hl and tl are required.");
+			}
+
 			Map<Human, Float> nameWeightMap = fileParser.parseHumanList(cmd.getOptionValue("hl"));
 			Set<Task> tasks = fileParser.parseTaskList(cmd.getOptionValue("tl"));
 			String[] previousDistributionPaths = cmd.getOptionValues("prev");
@@ -36,18 +53,8 @@ public class HumanTaskDistributor {
 			);
 
 			// Write to a file.
-			String filePath = cmd.hasOption("o") ? cmd.getOptionValue("o") : "distribution.csv";
-			CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(Paths.get(filePath), StandardCharsets.UTF_8), CSV_FORMAT);
-			for (Map.Entry<Human, Set<Task>> entry : taskDistributions.entrySet()) {
-				Human human = entry.getKey();
-				Set<Task> assignedTasks = entry.getValue();
-				List<Task> sortedTasks = assignedTasks.stream().sorted(Comparator.comparing(Task::getName)).collect(Collectors.toList());
-				for (Task task : sortedTasks) {
-					printer.printRecord(human.getName(), task.getName());
-				}
-			}
-			printer.close(true);
-
+			final String filePath = cmd.hasOption("o") ? cmd.getOptionValue("o") : "distribution.csv";
+			fileWriter.write(taskDistributions, filePath);
 			System.out.println("Wrote task distribution data to " + filePath);
 
 		} catch (Exception e) {
@@ -65,8 +72,17 @@ public class HumanTaskDistributor {
 				.longOpt("humans-list")
 				.hasArg(true)
 				.desc("Path to a CSV file containing list of humans to distribute tasks to. First column should be the name of the person, and second column can be empty, or contain a floating-point weight.")
-				.required(true)
+				.required(false)
 				.numberOfArgs(1)
+				.type(String.class)
+				.build()
+		);
+		options.addOption(Option.builder("ptl")
+				.longOpt("prepare-tasks-list")
+				.desc("Prepares a tasks-list CSV from a TXT file with one task for each item that matches the given Regex.")
+				.required(false)
+				.numberOfArgs(2)
+				.valueSeparator(',')
 				.type(String.class)
 				.build()
 		);
@@ -74,7 +90,7 @@ public class HumanTaskDistributor {
 				.longOpt("tasks-list")
 				.hasArg(true)
 				.desc("Path to a CSV file containing list of tasks that can be distributed to humans. First column should be unique task name.")
-				.required(true)
+				.required(false)
 				.numberOfArgs(1)
 				.type(String.class)
 				.build()

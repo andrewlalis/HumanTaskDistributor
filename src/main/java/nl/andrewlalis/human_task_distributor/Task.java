@@ -5,7 +5,7 @@ import lombok.Getter;
 import java.util.Objects;
 
 @Getter
-public class Task {
+public class Task implements Comparable<Task> {
 	private final String name;
 
 	public Task(String name) {
@@ -23,5 +23,10 @@ public class Task {
 	@Override
 	public int hashCode() {
 		return Objects.hash(getName());
+	}
+
+	@Override
+	public int compareTo(Task o) {
+		return this.getName().compareToIgnoreCase(o.getName());
 	}
 }
